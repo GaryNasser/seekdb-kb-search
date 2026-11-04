@@ -1,5 +1,48 @@
 # seekdb 知识库检索 · 参考文档
 
+## 如何创建集合（必须用 SDK，不要手工建表）
+
+脚本靠 SDK 元数据表 `sdk_collections` 里的登记行来解析「集合名 → 物理表名」。
+**手工 `CREATE TABLE` 不会写这行登记**，脚本会一直报「集合不存在」。
+所以集合要用 seekdb SDK（`seekdb@1.4.0`，npm / PyPI 同名包）创建：
+
+```javascript
+// Node.js：npm install seekdb --legacy-peer-deps
+import { SeekdbAdminClient, SeekdbClient, Schema,
+         VectorIndexConfig, FulltextIndexConfig } from 'seekdb';
+
+const admin = new SeekdbAdminClient({ host: '127.0.0.1', port: 2881, user: 'root', password: '' });
+const dbs = await admin.listDatabases();
+if (!dbs.some(d => d.name === 'stepfun_kb')) await admin.createDatabase('stepfun_kb');
+await admin.close();
+
+const client = new SeekdbClient({
+  host: '127.0.0.1', port: 2881, user: 'root', password: '', database: 'stepfun_kb',
+});
+await client.isConnected();
+
+const schema = new Schema({
+  vectorIndex: new VectorIndexConfig({
+    hnsw: { dimension: 512, distance: 'cosine' },
+    embeddingFunction: null,        // 向量由调用方算好，别让服务端做 embedding
+  }),
+  fulltextIndex: new FulltextIndexConfig('ik', { ik_mode: 'smart' }),
+});
+await client.createCollection({ name: 'knowledge_base', schema });
+
+// 已存在就直接复用；重建要先 deleteCollection（DROP TABLE 不会清元数据行）
+await client.getCollection({ name: 'knowledge_base', embeddingFunction: null });
+```
+
+Python 版同名包（`pip install seekdb`），API 形如
+`SeekdbClient(...).create_collection(name=..., schema=...)`。
+
+建好之后用脚本自检：
+
+```bash
+python scripts/kb_search.py --collection knowledge_base --list
+```
+
 ## 集合与表结构
 
 用 seekdb SDK（`seekdb@1.4.0`，npm / PyPI 同名包）创建的集合，在数据库里对应一张物理表：

@@ -18,6 +18,8 @@ description: 把 seekdb（OceanBase 向量数据库）里的知识库交给 AI �
 1. 一个可访问的 seekdb 实例（MySQL 协议，默认端口 2881）。没有的话看下面的「快速起一个」。
 2. Python 3.9+ 与依赖：`pip install pymysql`。
 3. 集合已建好，结构见 `reference.md`（`_id` / `document` / `embedding` / `metadata` + HNSW 向量索引 + ik 全文索引）。
+   **集合必须用 seekdb SDK 创建**（`reference.md` 有可直接复制的 Node.js 片段）——
+   手工 `CREATE TABLE` 不会在 `sdk_collections` 里登记，脚本就解析不出集合名。
 
 ## 快速起一个 seekdb
 
